@@ -51,10 +51,10 @@ class OpenloopGaitGenerator(gait_generator.GaitGenerator):
         """Initializes the class.
 
         Args:
-          robot: A quadruped robot that at least implements the GetFootContacts API
-            and num_legs property.
+          robot: A quadruped robot that at least implements the
+                 GetFootContacts API and num_legs property.
           stance_duration: The desired stance duration.
-          duty_factor: The ratio  stance_duration / total_gait_cycle.
+          duty_factor: The ratio of stance_duration / total_gait_cycle.
           initial_leg_state: The desired initial swing/stance state of legs indexed
             by their id.
           initial_leg_phase: The desired initial phase [0, 1] of the legs within the
@@ -71,16 +71,19 @@ class OpenloopGaitGenerator(gait_generator.GaitGenerator):
         self._swing_duration = np.array(stance_duration) / np.array(
             duty_factor
         ) - np.array(stance_duration)
+
         if len(initial_leg_phase) != self._robot.num_legs:
             raise ValueError(
                 "The number of leg phases should be the same as number of legs."
             )
         self._initial_leg_phase = initial_leg_phase
+
         if len(initial_leg_state) != self._robot.num_legs:
             raise ValueError(
                 "The number of leg states should be the same of number of legs."
             )
         self._initial_leg_state = initial_leg_state
+
         self._next_leg_state = []
 
         # The ratio in cycle is duty factor if initial state of the leg is STANCE,
@@ -152,6 +155,7 @@ class OpenloopGaitGenerator(gait_generator.GaitGenerator):
 
     def update(self, current_time):
         contact_state = self._robot.GetFootContacts()
+
         for leg_id in range(self._robot.num_legs):
             # Here is the explanation behind this logic: We use the phase within the
             # full swing/stance cycle to determine if a swing/stance switch occurs
@@ -189,12 +193,15 @@ class OpenloopGaitGenerator(gait_generator.GaitGenerator):
             if self._normalized_phase[leg_id] < self._contact_detection_phase_threshold:
                 continue
 
+            # If should be swing but is in stance
             if (
                 self._leg_state[leg_id] == gait_generator.LegState.SWING
                 and contact_state[leg_id]
             ):
                 logging.info("early touch down detected.")
                 self._leg_state[leg_id] = gait_generator.LegState.EARLY_CONTACT
+
+            # If should be stance but is in swing
             if (
                 self._leg_state[leg_id] == gait_generator.LegState.STANCE
                 and not contact_state[leg_id]
