@@ -35,34 +35,8 @@ FLAGS = flags.FLAGS
 
 _NUM_SIMULATION_ITERATION_STEPS = 300
 
-
-_STANCE_DURATION_SECONDS = [
-    0.3
-] * 4  # For faster trotting (v > 1.5 ms reduce this to 0.13s).
-
-# Standing
-# _DUTY_FACTOR = [1.] * 4
-# _INIT_PHASE_FULL_CYCLE = [0., 0., 0., 0.]
-# _MAX_TIME_SECONDS = 5
-
-# _INIT_LEG_STATE = (
-#     gait_generator_lib.LegState.STANCE,
-#     gait_generator_lib.LegState.STANCE,
-#     gait_generator_lib.LegState.STANCE,
-#     gait_generator_lib.LegState.S,
-# )
-
-# Tripod
-# _DUTY_FACTOR = [.8] * 4
-# _INIT_PHASE_FULL_CYCLE = [0., 0.25, 0.5, 0.]
-# _MAX_TIME_SECONDS = 5
-
-# _INIT_LEG_STATE = (
-#     gait_generator_lib.LegState.STANCE,
-#     gait_generator_lib.LegState.STANCE,
-#     gait_generator_lib.LegState.STANCE,
-#     gait_generator_lib.LegState.SWING,
-# )
+# For faster trotting (v > 1.5 ms reduce this to 0.13s).
+_STANCE_DURATION_SECONDS = [0.3] * 4
 
 # Trotting
 _DUTY_FACTOR = [0.6] * 4
@@ -155,17 +129,7 @@ def _update_controller_params(controller, lin_speed, ang_speed):
 
 def _run_example(max_time=_MAX_TIME_SECONDS):
     """Runs the locomotion controller example."""
-
-    # recording video requires ffmpeg in the path
-    record_video = False
-    if record_video:
-        p = pybullet
-        p.connect(
-            p.GUI, options='--width=1280 --height=720 --mp4="test.mp4" --mp4fps=100'
-        )
-        p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING, 1)
-    else:
-        p = bullet_client.BulletClient(connection_mode=pybullet.GUI)
+    p = bullet_client.BulletClient(connection_mode=pybullet.GUI)
 
     p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
     p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
@@ -186,40 +150,7 @@ def _run_example(max_time=_MAX_TIME_SECONDS):
     p.setPhysicsEngineParameter(enableConeFriction=0)
     p.setAdditionalSearchPath(pd.getDataPath())
 
-    # random.seed(10)
-    # p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0)
-    heightPerturbationRange = 0.06
-
-    plane = True
-    if plane:
-        p.loadURDF("plane.urdf")
-        # planeShape = p.createCollisionShape(shapeType = p.GEOM_PLANE)
-        # ground_id  = p.createMultiBody(0, planeShape)
-    else:
-        numHeightfieldRows = 256
-        numHeightfieldColumns = 256
-        heightfieldData = [0] * numHeightfieldRows * numHeightfieldColumns
-        for j in range(int(numHeightfieldColumns / 2)):
-            for i in range(int(numHeightfieldRows / 2)):
-                height = random.uniform(0, heightPerturbationRange)
-                heightfieldData[2 * i + 2 * j * numHeightfieldRows] = height
-                heightfieldData[2 * i + 1 + 2 * j * numHeightfieldRows] = height
-                heightfieldData[2 * i + (2 * j + 1) * numHeightfieldRows] = height
-                heightfieldData[2 * i + 1 + (2 * j + 1) * numHeightfieldRows] = height
-
-        terrainShape = p.createCollisionShape(
-            shapeType=p.GEOM_HEIGHTFIELD,
-            meshScale=[0.05, 0.05, 1],
-            heightfieldTextureScaling=(numHeightfieldRows - 1) / 2,
-            heightfieldData=heightfieldData,
-            numHeightfieldRows=numHeightfieldRows,
-            numHeightfieldColumns=numHeightfieldColumns,
-        )
-        ground_id = p.createMultiBody(0, terrainShape)
-
-    # p.resetBasePositionAndOrientation(ground_id,[0,0,0], [0,0,0,1])
-
-    # p.changeDynamics(ground_id, -1, lateralFriction=1.0)
+    p.loadURDF("plane.urdf")
 
     robot_uid = p.loadURDF(robot_sim.URDF_NAME, robot_sim.START_POS)
 
@@ -231,21 +162,14 @@ def _run_example(max_time=_MAX_TIME_SECONDS):
     controller.reset()
 
     p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
-    # while p.isConnected():
-    #  pos,orn = p.getBasePositionAndOrientation(robot_uid)
-    #  print("pos=",pos)
-    #  p.stepSimulation()
-    #  time.sleep(1./240)
     current_time = robot.GetTimeSinceReset()
-    # logId = p.startStateLogging(p.STATE_LOGGING_PROFILE_TIMINGS, "mpc.json")
 
     while current_time < max_time:
-        # pos,orn = p.getBasePositionAndOrientation(robot_uid)
-        # print("pos=",pos, " orn=",orn)
         p.submitProfileTiming("loop")
 
         # Updates the controller behavior parameters.
         lin_speed, ang_speed = _generate_example_linear_angular_speed(current_time)
+
         # lin_speed, ang_speed = (0., 0., 0.), 0.
         _update_controller_params(controller, lin_speed, ang_speed)
 
@@ -255,15 +179,8 @@ def _run_example(max_time=_MAX_TIME_SECONDS):
 
         robot.Step(hybrid_action)
 
-        if record_video:
-            p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING, 1)
-
-        # time.sleep(0.003)
         current_time = robot.GetTimeSinceReset()
         p.submitProfileTiming()
-    # p.stopStateLogging(logId)
-    # while p.isConnected():
-    #  time.sleep(0.1)
 
 
 def main(argv):
