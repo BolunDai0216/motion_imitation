@@ -323,9 +323,12 @@ void CalculateAMat(const Vector3d& rpy, MatrixXd* a_mat_ptr) {
     const double cos_pitch = cos(rpy[1]);
     const double tan_pitch = tan(rpy[1]);
     Matrix3d angular_velocity_to_rpy_rate;
+
+    // see Eq.(10) of MIT paper
     angular_velocity_to_rpy_rate << cos_yaw / cos_pitch, sin_yaw / cos_pitch, 0,
         -sin_yaw, cos_yaw, 0, cos_yaw* tan_pitch, sin_yaw* tan_pitch, 1;
 
+    // see Eq.(16) of MIT paper
     MatrixXd& a_mat = *a_mat_ptr;
     a_mat.block<3, 3>(0, 6) = angular_velocity_to_rpy_rate;
     a_mat(3, 9) = 1;
@@ -340,6 +343,7 @@ void CalculateBMat(double inv_mass, const Matrix3d& inv_inertia,
     const int num_legs = foot_positions.rows();
     MatrixXd& b_mat = *b_mat_ptr;
     for (int i = 0; i < num_legs; ++i) {
+        // see Eq.(16) of MIT paper
         b_mat.block<k3Dim, k3Dim>(6, i * k3Dim) =
             inv_inertia * ConvertToSkewSymmetric(foot_positions.row(i));
         b_mat(9, i * k3Dim) = inv_mass;
@@ -349,9 +353,9 @@ void CalculateBMat(double inv_mass, const Matrix3d& inv_inertia,
 }
 
 void CalculateExponentials(const MatrixXd& a_mat, const MatrixXd& b_mat,
-    double timestep, MatrixXd* ab_mat_ptr,
-    MatrixXd* a_exp_ptr, MatrixXd* b_exp_ptr) {
-    const int state_dim = ConvexMpc::kStateDim;
+                           double timestep, MatrixXd* ab_mat_ptr,
+                           MatrixXd* a_exp_ptr, MatrixXd* b_exp_ptr) {
+    const int state_dim = ConvexMpc::kStateDim;  // 13
     MatrixXd& ab_mat = *ab_mat_ptr;
     ab_mat.block<state_dim, state_dim>(0, 0) = a_mat * timestep;
     const int action_dim = b_mat.cols();
@@ -364,10 +368,10 @@ void CalculateExponentials(const MatrixXd& a_mat, const MatrixXd& b_mat,
 }
 
 void CalculateQpMats(const MatrixXd& a_exp, const MatrixXd& b_exp,
-    const MatrixXd& qp_weights_single,
-    const MatrixXd& alpha_single, int horizon,
-    MatrixXd* a_qp_ptr, MatrixXd* anb_aux_ptr,
-    MatrixXd* b_qp_ptr, MatrixXd* p_mat_ptr) {
+                     const MatrixXd& qp_weights_single,
+                     const MatrixXd& alpha_single, int horizon,
+                     MatrixXd* a_qp_ptr, MatrixXd* anb_aux_ptr,
+                     MatrixXd* b_qp_ptr, MatrixXd* p_mat_ptr) {
     const int state_dim = ConvexMpc::kStateDim;
     MatrixXd& a_qp = *a_qp_ptr;
     a_qp.block(0, 0, state_dim, state_dim) = a_exp;

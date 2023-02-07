@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import inspect
 import os
+import time
 
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(os.path.dirname(currentdir))
@@ -154,6 +155,8 @@ class TorqueStanceLegController(leg_controller.LegController):
         # print("Com RPY: {}".format(self._robot.GetBaseRollPitchYawRate()))
         # print("Com RPY Rate: {}".format(self._robot.GetBaseRollPitchYawRate()))
         p.submitProfileTiming("predicted_contact_forces")
+
+        # tic = time.time()
         predicted_contact_forces = self._cpp_mpc.compute_contact_forces(
             [0],  # com_position
             np.asarray(
@@ -175,6 +178,7 @@ class TorqueStanceLegController(leg_controller.LegController):
             desired_com_roll_pitch_yaw,  # desired_com_roll_pitch_yaw
             desired_com_angular_velocity,  # desired_com_angular_velocity
         )
+        # print(time.time() - tic)
         p.submitProfileTiming()
         # sol = np.array(predicted_contact_forces).reshape((-1, 12))
         # x_dim = np.array([0, 3, 6, 9])
